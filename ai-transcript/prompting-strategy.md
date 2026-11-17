@@ -32,7 +32,6 @@ I asked for evidence, not assertions, and the session shows these checks being r
 - **Bad checks.** A first performance test checked the wrong case and proved nothing. It was rerun with a filter that has no index, and the result was reported as unverified on PostgreSQL 16 because the local server was 18.
 - **Stack traces.** The `curl` output showed stack traces in error responses. That was fixed before moving on.
 - **Before committing,** I asked for a full review that trimmed over-detailed comments and tidied the structure.
-- **This document and `my-analysis.md`.** I had Claude draft both from the session in my voice, and then reviewed and edited them. The transcript shows this.
 
 ## What I would do differently
 
