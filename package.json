@@ -1,0 +1,18 @@
+{
+  "name": "taskboard-assessment",
+  "private": true,
+  "engines": {
+    "node": ">=20.12"
+  },
+  "workspaces": [
+    "part2-implementation/*"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d --wait",
+    "migrate": "npm run migrate -w part2-implementation/backend",
+    "seed": "npm run seed -w part2-implementation/backend",
+    "dev:api": "npm run dev -w part2-implementation/backend",
+    "dev:web": "npm run dev -w part2-implementation/frontend",
+    "test": "npm test -w part2-implementation/backend"
+  }
+}

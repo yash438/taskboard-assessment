@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+*.log
+# Contains the assessor's contact details; not ours to publish.
+assessment.pdf

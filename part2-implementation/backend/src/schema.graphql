@@ -1,0 +1,118 @@
+# R-2.1 API: the task board subset of part1-design/schema.graphql, scoped to the caller's organizations.
+
+"Calendar date, YYYY-MM-DD."
+scalar Date
+
+"ISO-8601 timestamp with offset and microseconds."
+scalar DateTime
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum StatusCategory {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+type User {
+  id: ID!
+  name: String!
+}
+
+type ProjectStatus {
+  id: ID!
+  name: String!
+  category: StatusCategory!
+  position: Int!
+}
+
+type Label {
+  id: ID!
+  name: String!
+}
+
+type Project {
+  id: ID!
+  name: String!
+  "Custom statuses, ordered by position."
+  statuses: [ProjectStatus!]!
+  "Members of the project's organization (the assignee filter options)."
+  members: [User!]!
+}
+
+type Task {
+  id: ID!
+  title: String!
+  priority: Priority!
+  status: ProjectStatus!
+  assignee: User
+  dueDate: Date
+  labels: [Label!]!
+  createdAt: DateTime!
+}
+
+type TaskEdge {
+  cursor: String!
+  node: Task!
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+type TaskConnection {
+  edges: [TaskEdge!]!
+  pageInfo: PageInfo!
+}
+
+"Set conditions combine with AND; an omitted or empty list means no condition. Date bounds are inclusive."
+input TaskFilter {
+  statusIds: [ID!]
+  assigneeIds: [ID!]
+  priorities: [Priority!]
+  dueFrom: Date
+  dueTo: Date
+}
+
+type StatusCount {
+  status: ProjectStatus!
+  count: Int!
+}
+
+type PriorityCount {
+  priority: Priority!
+  count: Int!
+}
+
+type AssigneeCount {
+  "Null for unassigned tasks."
+  assignee: User
+  count: Int!
+}
+
+type TaskSummary {
+  total: Int!
+  "Tasks with a due date before today whose status is not in the DONE category."
+  overdue: Int!
+  "Every status of the project in position order, including zero counts."
+  byStatus: [StatusCount!]!
+  "All four priorities from LOW to URGENT, including zero counts."
+  byPriority: [PriorityCount!]!
+  "Assignees with at least one matching task, largest count first."
+  byAssignee: [AssigneeCount!]!
+}
+
+type Query {
+  "Projects in the organizations the current user belongs to."
+  projects: [Project!]!
+  "Tasks in a project, newest first. first must be between 1 and 100."
+  tasks(projectId: ID!, filter: TaskFilter, first: Int = 50, after: String): TaskConnection!
+  "Counts over the same project and filter as tasks, so the numbers match the table."
+  taskSummary(projectId: ID!, filter: TaskFilter): TaskSummary!
+}

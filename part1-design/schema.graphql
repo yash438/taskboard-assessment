@@ -1,0 +1,267 @@
+# R-1.1 GraphQL types for the full data model (see schema.sql).
+# Everything resolves within the caller's organizations; any role can read, mutations list their roles.
+
+scalar DateTime # ISO-8601 timestamp
+scalar Date     # ISO-8601 calendar date, YYYY-MM-DD
+scalar JSON
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum StatusCategory {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+type User {
+  id: ID!
+  email: String!
+  name: String!
+}
+
+type Organization {
+  id: ID!
+  name: String!
+  slug: String!
+  "Workspace-level settings."
+  settings: JSON!
+  "The current user's role in this organization."
+  viewerRole: Role!
+  members(first: Int = 50, after: String): MembershipConnection!
+  projects(first: Int = 50, after: String): ProjectConnection!
+  labels: [Label!]!
+  createdAt: DateTime!
+}
+
+type Membership {
+  user: User!
+  role: Role!
+  joinedAt: DateTime!
+}
+
+type MembershipEdge {
+  cursor: String!
+  node: Membership!
+}
+
+type MembershipConnection {
+  edges: [MembershipEdge!]!
+  pageInfo: PageInfo!
+}
+
+type Project {
+  id: ID!
+  organization: Organization!
+  name: String!
+  description: String
+  createdBy: User
+  createdAt: DateTime!
+  archivedAt: DateTime
+  "Custom statuses, ordered by position."
+  statuses: [ProjectStatus!]!
+  tasks(filter: TaskFilter, first: Int = 50, after: String): TaskConnection!
+}
+
+type ProjectEdge {
+  cursor: String!
+  node: Project!
+}
+
+type ProjectConnection {
+  edges: [ProjectEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ProjectStatus {
+  id: ID!
+  name: String!
+  category: StatusCategory!
+  position: Int!
+}
+
+type Label {
+  id: ID!
+  name: String!
+}
+
+type Task {
+  id: ID!
+  project: Project!
+  status: ProjectStatus!
+  title: String!
+  description: String
+  priority: Priority!
+  assignee: User
+  createdBy: User
+  dueDate: Date
+  labels: [Label!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  comments(first: Int = 50, after: String): CommentConnection!
+  "Newest first."
+  activity(first: Int = 50, after: String): ActivityConnection!
+}
+
+type TaskEdge {
+  cursor: String!
+  node: Task!
+}
+
+type TaskConnection {
+  edges: [TaskEdge!]!
+  pageInfo: PageInfo!
+}
+
+type Comment {
+  id: ID!
+  author: User
+  body: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type CommentEdge {
+  cursor: String!
+  node: Comment!
+}
+
+type CommentConnection {
+  edges: [CommentEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ActivityEvent {
+  id: ID!
+  actor: User
+  action: ActivityAction!
+  "Changed field for UPDATED events, e.g. status, assignee, priority, dueDate."
+  field: String
+  oldValue: JSON
+  newValue: JSON
+  createdAt: DateTime!
+}
+
+type ActivityEdge {
+  cursor: String!
+  node: ActivityEvent!
+}
+
+type ActivityConnection {
+  edges: [ActivityEdge!]!
+  pageInfo: PageInfo!
+}
+
+"All conditions combine with AND. Date bounds are inclusive."
+input TaskFilter {
+  statusIds: [ID!]
+  assigneeIds: [ID!]
+  priorities: [Priority!]
+  dueFrom: Date
+  dueTo: Date
+}
+
+type Query {
+  me: User!
+  "Organizations the current user belongs to."
+  organizations: [Organization!]!
+  organization(id: ID!): Organization
+  project(id: ID!): Project
+  task(id: ID!): Task
+  "Tasks assigned to the current user, past due and not in a DONE status, across all their organizations."
+  myOverdueTasks(first: Int = 50, after: String): TaskConnection!
+}
+
+input CreateProjectInput {
+  orgId: ID!
+  name: String!
+  description: String
+}
+
+input CreateProjectStatusInput {
+  projectId: ID!
+  name: String!
+  category: StatusCategory!
+  position: Int!
+}
+
+input UpdateProjectStatusInput {
+  id: ID!
+  name: String
+  category: StatusCategory
+  position: Int
+}
+
+input CreateTaskInput {
+  projectId: ID!
+  statusId: ID!
+  title: String!
+  description: String
+  priority: Priority = MEDIUM
+  assigneeId: ID
+  dueDate: Date
+  labelIds: [ID!]
+}
+
+"Omitted fields are unchanged; explicit null clears a nullable field."
+input UpdateTaskInput {
+  statusId: ID
+  title: String
+  description: String
+  priority: Priority
+  assigneeId: ID
+  dueDate: Date
+  labelIds: [ID!]
+}
+
+type Mutation {
+  "owner, admin"
+  updateOrganizationSettings(orgId: ID!, settings: JSON!): Organization!
+  "owner, admin. Only an owner can grant OWNER."
+  addMember(orgId: ID!, email: String!, role: Role!): Membership!
+  "owner, admin. Only an owner can grant or revoke OWNER; the last owner cannot be demoted."
+  updateMemberRole(orgId: ID!, userId: ID!, role: Role!): Membership!
+  "owner, admin. The last owner cannot be removed."
+  removeMember(orgId: ID!, userId: ID!): Boolean!
+
+  "owner, admin"
+  createProject(input: CreateProjectInput!): Project!
+  "owner, admin"
+  createProjectStatus(input: CreateProjectStatusInput!): ProjectStatus!
+  "owner, admin"
+  updateProjectStatus(input: UpdateProjectStatusInput!): ProjectStatus!
+  "owner, admin. Tasks in the deleted status move to moveTasksToStatusId."
+  deleteProjectStatus(id: ID!, moveTasksToStatusId: ID!): Boolean!
+  "owner, admin, member"
+  createLabel(orgId: ID!, name: String!): Label!
+
+  "owner, admin, member. Writes a CREATED activity event."
+  createTask(input: CreateTaskInput!): Task!
+  "owner, admin, member. Writes one UPDATED activity event per changed field."
+  updateTask(id: ID!, input: UpdateTaskInput!): Task!
+  "owner, admin, member"
+  deleteTask(id: ID!): Boolean!
+  "owner, admin, member"
+  addComment(taskId: ID!, body: String!): Comment!
+}
