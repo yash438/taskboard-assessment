@@ -2,7 +2,7 @@
 # Everything resolves within the caller's organizations; any role can read, mutations list their roles.
 
 scalar DateTime # ISO-8601 timestamp
-scalar Date     # ISO-8601 calendar date, YYYY-MM-DD
+scalar Date # ISO-8601 calendar date, YYYY-MM-DD
 scalar JSON
 
 enum Role {

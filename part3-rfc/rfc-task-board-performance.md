@@ -1,11 +1,11 @@
 # RFC: Task Board Performance for Large Projects
 
-| | |
-|---|---|
-| **Status** | Draft for review |
-| **Author** | Yash |
+|               |                                               |
+| ------------- | --------------------------------------------- |
+| **Status**    | Draft for review                              |
+| **Author**    | Yash                                          |
 | **Reviewers** | Board team engineers, Product (task board PM) |
-| **Date** | 2026-11-17 |
+| **Date**      | 2026-11-17                                    |
 
 ## 1. Summary
 
@@ -15,22 +15,22 @@ The task board fetches every task in a project, renders all of them, and refetch
 
 **What users see.** Large-project boards take 6–8 s to become usable, and every filter change or card move repeats most of that cost. The organizations with the biggest projects are typically our largest accounts, so the slowest experience falls on the customers we can least afford to frustrate.
 
-**Why it happens.** Numbers marked *(assumed)* are estimates to confirm in Phase 0; the others come from the current behaviour or from the Part 2 prototype.
+**Why it happens.** Numbers marked _(assumed)_ are estimates to confirm in Phase 0; the others come from the current behaviour or from the Part 2 prototype.
 
-| Cause | Effect at 2,000 tasks |
-|---|---|
-| One query returns every task with assignee, labels and status | ~1.5 KB per task → **~3 MB JSON** per load *(assumed)* |
-| The whole Kanban is rendered client-side | ~25 DOM nodes per card → **~50,000 nodes** *(assumed)*; slow first render and scrolling |
-| Every filter change refetches everything | each filter click costs a full load (**6–8 s**) |
-| Drag-and-drop triggers a full refetch | a card move takes seconds to settle; concurrent edits flicker |
-| Counts are computed from the loaded list | the client must load every task just to show column totals |
+| Cause                                                         | Effect at 2,000 tasks                                                                   |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| One query returns every task with assignee, labels and status | ~1.5 KB per task → **~3 MB JSON** per load _(assumed)_                                  |
+| The whole Kanban is rendered client-side                      | ~25 DOM nodes per card → **~50,000 nodes** _(assumed)_; slow first render and scrolling |
+| Every filter change refetches everything                      | each filter click costs a full load (**6–8 s**)                                         |
+| Drag-and-drop triggers a full refetch                         | a card move takes seconds to settle; concurrent edits flicker                           |
+| Counts are computed from the loaded list                      | the client must load every task just to show column totals                              |
 
 **Evidence that the server is not the bottleneck.** The Part 2 prototype, using the same data model and a seeded 2,500-task project, measured:
 
-| Query | Time |
-|---|---|
+| Query                                                                | Time   |
+| -------------------------------------------------------------------- | ------ |
 | One 50-task page with filters, via keyset pagination (`tasks` query) | 0.3 ms |
-| Board summary over 2,500 tasks (one `GROUP BY` query) | 4.5 ms |
+| Board summary over 2,500 tasks (one `GROUP BY` query)                | 4.5 ms |
 
 The time goes into transferring and rendering data the user never looks at.
 
@@ -45,6 +45,7 @@ The time goes into transferring and rendering data the user never looks at.
 **A. Optimise the client only.** Keep the single fetch. Virtualise columns so only visible cards render, cache the response, and make moves optimistic (shown immediately).
 
 **B. Server-driven board (recommended).**
+
 - Each column requests its first page (about 30 cards) using keyset pagination, and more as the user scrolls.
 - Filters run on the server.
 - Column counts come from a summary query.
@@ -52,15 +53,15 @@ The time goes into transferring and rendering data the user never looks at.
 
 **C. Local-first sync engine.** Replicate project data into the browser (IndexedDB) and keep it current with delta sync over a WebSocket, so reads become local.
 
-| | A. Client only | **B. Server-driven** | C. Sync engine |
-|---|---|---|---|
-| First load at 2,000 tasks | ~4 s (still ~3 MB) | **< 1.5 s (~100 KB)** | slow first visit, instant afterwards |
-| Filter change | fast after load | **~200–300 ms round trip** | instant |
-| Scales to 20,000+ tasks | no | **yes** | needs per-project data limits |
-| Move latency | instant (optimistic) | **instant (optimistic)** | instant |
-| Build effort | ~2 weeks | **~6–7 weeks** | quarter or more, new infrastructure |
-| Delivery risk | low | **medium** | high (conflicts, schema sync, storage limits) |
-| Reuses existing work | partially | **yes: Part 2 API** | no |
+|                           | A. Client only       | **B. Server-driven**       | C. Sync engine                                |
+| ------------------------- | -------------------- | -------------------------- | --------------------------------------------- |
+| First load at 2,000 tasks | ~4 s (still ~3 MB)   | **< 1.5 s (~100 KB)**      | slow first visit, instant afterwards          |
+| Filter change             | fast after load      | **~200–300 ms round trip** | instant                                       |
+| Scales to 20,000+ tasks   | no                   | **yes**                    | needs per-project data limits                 |
+| Move latency              | instant (optimistic) | **instant (optimistic)**   | instant                                       |
+| Build effort              | ~2 weeks             | **~6–7 weeks**             | quarter or more, new infrastructure           |
+| Delivery risk             | low                  | **medium**                 | high (conflicts, schema sync, storage limits) |
+| Reuses existing work      | partially            | **yes: Part 2 API**        | no                                            |
 
 Option A is a useful first step but does not survive the next order of magnitude, because payload size still grows with every task. Option C gives the best experience but is a platform investment, and it should be decided on its own merits, not as a performance fix.
 
@@ -84,25 +85,25 @@ New work:
 
 Measured with real-user monitoring (RUM) on projects with 2,000+ tasks, unless stated otherwise.
 
-| Metric | Today | Target |
-|---|---|---|
-| Board load to interactive, p95 | 6–8 s | **≤ 1.5 s** |
-| Initial payload | ~3 MB *(assumed)* | **≤ 150 KB** |
-| Filter change to updated board, p95 | 6–8 s | **≤ 300 ms** |
-| Card move, visual feedback | seconds | **≤ 100 ms** (optimistic) |
-| Card move, server confirmation, p95 | full refetch | **≤ 250 ms**; zero full refetches |
-| `tasks` page / `taskSummary` API latency, p95 | n/a | **≤ 50 ms / ≤ 100 ms** |
-| DOM nodes on the board | ~50,000 *(assumed)* | **≤ 3,000** |
+| Metric                                        | Today               | Target                            |
+| --------------------------------------------- | ------------------- | --------------------------------- |
+| Board load to interactive, p95                | 6–8 s               | **≤ 1.5 s**                       |
+| Initial payload                               | ~3 MB _(assumed)_   | **≤ 150 KB**                      |
+| Filter change to updated board, p95           | 6–8 s               | **≤ 300 ms**                      |
+| Card move, visual feedback                    | seconds             | **≤ 100 ms** (optimistic)         |
+| Card move, server confirmation, p95           | full refetch        | **≤ 250 ms**; zero full refetches |
+| `tasks` page / `taskSummary` API latency, p95 | n/a                 | **≤ 50 ms / ≤ 100 ms**            |
+| DOM nodes on the board                        | ~50,000 _(assumed)_ | **≤ 3,000**                       |
 
 ## 7. Implementation plan
 
-| Phase | Scope | Estimate |
-|---|---|---|
-| 0. Baseline | Add RUM for load, filter and move timings and payload size; confirm the assumed numbers | 1 week |
-| 1. Server-driven reads | Per-column paginated queries, server-side filters, counts from `taskSummary`, behind a flag | 2–3 weeks |
-| 2. Moves without refetch | Add `rank` in expand/contract steps (add the column, backfill in batches, then switch reads); add the `moveTask` mutation and the optimistic cache update | 2 weeks |
-| 3. Rendering and summary at scale | Column virtualisation; covering index and short-lived cache for the summary | 1 week |
-| 4. Cleanup | Remove the fetch-everything query and the flag once 100% of organizations are stable for 2 weeks | 0.5 week |
+| Phase                             | Scope                                                                                                                                                     | Estimate  |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| 0. Baseline                       | Add RUM for load, filter and move timings and payload size; confirm the assumed numbers                                                                   | 1 week    |
+| 1. Server-driven reads            | Per-column paginated queries, server-side filters, counts from `taskSummary`, behind a flag                                                               | 2–3 weeks |
+| 2. Moves without refetch          | Add `rank` in expand/contract steps (add the column, backfill in batches, then switch reads); add the `moveTask` mutation and the optimistic cache update | 2 weeks   |
+| 3. Rendering and summary at scale | Column virtualisation; covering index and short-lived cache for the summary                                                                               | 1 week    |
+| 4. Cleanup                        | Remove the fetch-everything query and the flag once 100% of organizations are stable for 2 weeks                                                          | 0.5 week  |
 
 ## 8. Rollout
 
@@ -116,6 +117,6 @@ Measured with real-user monitoring (RUM) on projects with 2,000+ tasks, unless s
 ## 9. Risks and open questions
 
 - **Rank exhaustion.** Repeated moves between the same two cards can run out of key precision. Rebalance the column in a background job when keys get too long.
-- **Counts vs. visible cards.** A column header can say "412" while showing 30 cards. *PM: is "30 of 412" with scroll-to-load acceptable, or do we need "jump to end"?*
-- **Bulk actions** that expect every task to be loaded (select all, export) must become server-side operations. *PM: which of these are used on large boards?*
+- **Counts vs. visible cards.** A column header can say "412" while showing 30 cards. _PM: is "30 of 412" with scroll-to-load acceptable, or do we need "jump to end"?_
+- **Bulk actions** that expect every task to be loaded (select all, export) must become server-side operations. _PM: which of these are used on large boards?_
 - **Search.** Today it filters loaded cards client-side; with paging it must become a server-side text search, a follow-up RFC if needed.

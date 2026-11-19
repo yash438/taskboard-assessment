@@ -2,7 +2,7 @@
 
 ## Where I agree
 
-The most important finding is the first one. The composite `(org_id, ...)` foreign keys make cross-tenant *writes* impossible, but nothing in the database stops a cross-tenant *read*, and the DataLoader pattern described in the documentation (`WHERE id = ANY($1)`) was unscoped. In Part 2 every query and loader is scoped to the caller's organizations, and the tests fail when that scoping is removed.
+The most important finding is the first one. The composite `(org_id, ...)` foreign keys make cross-tenant _writes_ impossible, but nothing in the database stops a cross-tenant _read_, and the DataLoader pattern described in the documentation (`WHERE id = ANY($1)`) was unscoped. In Part 2 every query and loader is scoped to the caller's organizations, and the tests fail when that scoping is removed.
 
 I also agree with three findings because they were measured, not argued:
 
@@ -14,7 +14,7 @@ I also agree with three findings because they were measured, not argued:
 
 **Severity of the N+1 finding (#3).** Batching paginated children per parent with `LATERAL` is the right technique, but the simpler fix is not to expose nested paginated connections inside list contexts at all. I would rate this Medium and fix it in schema design, not clever resolvers.
 
-**Triggers for activity history (#4).** A trigger guarantees that a row gets written, but it gets the actor from `SET LOCAL app.user_id`. That is fragile behind a transaction-pooling proxy, and it records *that* a column changed, not *why*. I would keep the write explicit, in the same transaction as the update (the CTE pattern in the documentation), routed through one service function. A trigger is a safety net for writes that bypass that function, not the primary mechanism.
+**Triggers for activity history (#4).** A trigger guarantees that a row gets written, but it gets the actor from `SET LOCAL app.user_id`. That is fragile behind a transaction-pooling proxy, and it records _that_ a column changed, not _why_. I would keep the write explicit, in the same transaction as the update (the CTE pattern in the documentation), routed through one service function. A trigger is a safety net for writes that bypass that function, not the primary mechanism.
 
 **Row-Level Security as the fix for #1.** I want RLS eventually, but not first: it adds per-transaction session state and fails silently if the setting is missing. The first fix is one data-access path that requires org IDs, plus a test per entry point that requests another tenant's ID. RLS comes after that.
 

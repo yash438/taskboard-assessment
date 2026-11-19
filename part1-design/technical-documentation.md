@@ -31,12 +31,12 @@ erDiagram
 
 Role permissions, enforced in resolvers and annotated on each mutation in `schema.graphql`:
 
-| Action | owner | admin | member | viewer |
-|---|---|---|---|---|
-| Read projects, tasks, comments, activity | yes | yes | yes | yes |
-| Create, update or delete tasks; comment; create labels | yes | yes | yes | no |
-| Manage projects, statuses, members, settings | yes | yes | no | no |
-| Grant or revoke the owner role | yes | no | no | no |
+| Action                                                 | owner | admin | member | viewer |
+| ------------------------------------------------------ | ----- | ----- | ------ | ------ |
+| Read projects, tasks, comments, activity               | yes   | yes   | yes    | yes    |
+| Create, update or delete tasks; comment; create labels | yes   | yes   | yes    | no     |
+| Manage projects, statuses, members, settings           | yes   | yes   | no     | no     |
+| Grant or revoke the owner role                         | yes   | no    | no     | no     |
 
 ## 2. Query patterns
 
@@ -93,14 +93,14 @@ GROUP BY GROUPING SETS ((t.status_id), (t.priority), (t.assignee_id), ());
 
 Indexes follow the queries above. Tenant foreign keys are indexed on the referencing side; foreign keys to `users` are not yet (see [`ai-critique.md`](ai-critique.md)).
 
-| Index | Serves |
-|---|---|
-| `organization_members (user_id) INCLUDE (org_id, role)` | Per-request membership load |
-| `tasks (project_id, created_at DESC, id DESC)` | Board order and keyset cursor |
-| `tasks (project_id, status_id)` | Status filter, summary, status FK |
-| `tasks (project_id, assignee_id)` | Assignee filter within a project |
-| `tasks (assignee_id, due_date)` | "My overdue tasks"; member removal |
-| `task_labels (label_id)`; `(task_id, ...)` on comments and activity | Label lookups, per-task feeds |
+| Index                                                               | Serves                             |
+| ------------------------------------------------------------------- | ---------------------------------- |
+| `organization_members (user_id) INCLUDE (org_id, role)`             | Per-request membership load        |
+| `tasks (project_id, created_at DESC, id DESC)`                      | Board order and keyset cursor      |
+| `tasks (project_id, status_id)`                                     | Status filter, summary, status FK  |
+| `tasks (project_id, assignee_id)`                                   | Assignee filter within a project   |
+| `tasks (assignee_id, due_date)`                                     | "My overdue tasks"; member removal |
+| `task_labels (label_id)`; `(task_id, ...)` on comments and activity | Label lookups, per-task feeds      |
 
 - **Keyset pagination**: cost depends on the page size, not the page number, and pages stay stable when rows are inserted in between.
 - **No N+1**: `Task.assignee`, `Task.status` and `Task.labels` resolve through per-request DataLoaders, so a 50-task page is one query per relation.

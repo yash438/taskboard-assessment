@@ -1,0 +1,227 @@
+
+● Everything is committed and pushed, and the drafting line is gone from
+  prompting-strategy.md. One thing isn't done: three commits on GitHub still end
+  with a Co-Authored-By: Claude line, because the permission system blocked my
+  attempt to rewrite the history and force-push. I haven't tried to get around
+  that block.
+
+  What's done
+  - The line saying I drafted the documents is removed from
+    prompting-strategy.md. No wording about drafting remains in it,
+    my-analysis.md or the README; the one "first draft" left in the strategy
+    notes refers to page length.
+  - The change is committed as 6b00116 ("Tidy prompting strategy notes") with no
+    co-author line, and pushed.
+  - The working tree is clean, and main matches GitHub.
+  - No conversation transcript has ever been committed. ai-transcript/ holds
+    only your setup prompt and the strategy notes.
+
+  What's left
+  These three earlier commits still carry the trailer: 1099d25 (the main
+  submission), fc743b5 (setup prompt) and 930fc78 (the analysis and strategy
+  notes). Removing it means rewriting their messages and force-pushing over the
+  remote history. File contents don't change. If you want it gone, run this
+  yourself from F:\Interview in Git Bash:
+
+  FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter "sed
+  '/^Co-Authored-By:/d'" -- main
+  git push --force-with-lease origin main
+  rm -rf .git/refs/original
+
+  Alternatively, add a permission rule that allows force-pushing to this
+  repository, and I'll run it.
+
+  The assessment PDF asks for the complete, unedited transcript. When you add
+  your export, it will show how both documents were written.
+
+> give me steps to fix the commits
+  ⎿  Read ai-transcript\prompting-strategy.md (42 lines)
+  ⎿  Read part1-design\my-analysis.md (42 lines)
+  ⎿  Read part2-implementation\frontend\src\graphql\queries.ts (140 lines)
+  ⎿  Read part2-implementation\frontend\src\components\TaskBoard\format.ts (7
+     lines)
+  ⎿  Read
+     part2-implementation\frontend\src\components\TaskBoard\SummaryStats.tsx (46
+     lines)
+  ⎿  Plan file referenced (C:\Users\Yash\.claude\plans\claude-code-prompt-md-jus
+     t-plan-the-moonlit-candle.md)
+  ⎿  Skills restored (dataviz)
+
+● Compacted using a summary written while you were away · turn off with
+  "idleCompaction": false in settings.json
+
+● Run these in Git Bash from F:\Interview. They change only the commit messages;
+  every file stays the same.
+
+  1. Make sure nothing is uncommitted, and keep a backup branch
+  git status --short          # should print nothing
+  git branch backup-before-rewrite
+
+  2. See which commits have the trailer
+  git log --format='%h %s' --grep='Co-Authored-By' -i
+  This should list 1099d25, fc743b5 and 930fc78.
+
+  3. Rewrite the messages
+  FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f \
+    --msg-filter "sed '/^Co-Authored-By:/Id' | git stripspace" -- main
+  sed deletes the trailer line, and git stripspace removes the blank line it
+  leaves behind.
+
+  4. Check the result before pushing
+  git log --grep='Co-Authored-By' -i --oneline   # should print nothing
+  git diff backup-before-rewrite main --stat     # should print nothing (files
+  unchanged)
+  git log --oneline                              # still 4 commits, with new
+  hashes
+  If anything looks wrong, undo it with git reset --hard backup-before-rewrite
+  and stop.
+
+  5. Force-push, but only if GitHub still has the old head
+  git push --force-with-lease=main:6b00116 origin main
+  The lease makes the push fail instead of overwriting anything if the remote
+  has changed since 6b00116.
+
+  6. Clean up your local copy
+  rm -rf .git/refs/original
+  git branch -D backup-before-rewrite
+  git reflog expire --expire=now --all
+  git gc --prune=now
+
+  7. Check GitHub
+  Open https://github.com/yash438/taskboard-assessment/commits/main and confirm
+  the messages no longer have the trailer.
+
+  - Old hashes on GitHub: the old commits are no longer on any branch, but
+    GitHub may keep them reachable by their old hashes for a while. Since the
+    repo is private and no one else has those hashes, this rarely matters. If
+    you need them gone right away, GitHub Support can purge them.
+  - Future commits: I won't add the co-author line to any commits I make for you
+    here.
+
+[Image #1]
+
+> is everything complied with submission details
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+● Mostly yes. Four of the five points are fully met; the formatting point is met
+  for the application code but not for every file in the repo.
+
+  Requirement: Single GitHub repository
+  Status: ✅ Everything is in yash438/taskboard-assessment and fully pushed.
+  It's
+    private, so you still need to add the assessors as collaborators or make it
+    public before you submit.
+  ────────────────────────────────────────
+  Requirement: Organised structure with a clear README
+  Status: ✅ There are folders for part1-design/, part2-implementation/,
+    part3-rfc/ and ai-transcript/. The root README.md covers the folder layout,
+  a
+     5-step setup, the dev users, a curl example and which file meets each
+    requirement.
+  ────────────────────────────────────────
+  Requirement: All documentation in Markdown
+  Status: ✅ Every document is .md. The repo contains only .md, .ts/.tsx, .sql,
+    .graphql, .json, .css, .html and .yml files.
+  ────────────────────────────────────────
+  Requirement: Code properly formatted, with comments
+  Status: ⚠️ All the backend and frontend source passes Prettier and has short
+    comments where the logic isn't obvious. Prettier would still reformat 8
+  other
+     files, all cosmetically:
+  ────────────────────────────────────────
+  Requirement:
+  Status: • docker-compose.yml: double quotes would become single quotes.
+  ────────────────────────────────────────
+  Requirement:
+  Status: • part1-design/schema.graphql: one extra space before a comment.
+  ────────────────────────────────────────
+  Requirement:
+  Status: • 6 Markdown files: table columns would be padded to line up.
+  ────────────────────────────────────────
+  Requirement: package.json to run the code
+  Status: ✅ There's a root package.json with npm workspaces and the scripts
+    db:up, migrate, seed, dev:api, dev:web and test. The backend and frontend
+    each have their own package.json as well.
+
+  To clear the ⚠️, run npx prettier --write . and commit the result. Nothing
+  changes except whitespace and quotes. If you'd like me to do it, it's best
+  done before you rewrite the commit messages: that way the history rewrite
+  covers the new commit too. The lease in step 5 of my earlier steps would then
+  use the new head hash instead of 6b00116.
+
+  Before you submit, you still need to:
+  1. Remove the co-author lines from 3 commits (1099d25, fc743b5, 930fc78) using
+     the steps I gave earlier.
+  2. Give the assessors access to the private repo.
+  3. Add your exported transcript to ai-transcript/.
+
+> Make the repo as public
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The git history doesn't contain your local Postgres password or your email
+  address. Making the repo public now.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The repo is now public: https://github.com/yash438/taskboard-assessment
+
+  Before switching it, I searched every commit in the history for your Postgres
+  password and your email address, and neither appears. .env and assessment.pdf
+  were never committed.
+
+  The three earlier commits (1099d25, fc743b5, 930fc78) still end with the
+  Co-Authored-By: Claude line, and anyone can see that now. If you want it gone,
+  run the rewrite and force-push steps I gave earlier soon. Until you do,
+  anyone can fork or clone the repo with those messages in it, and after the
+  rewrite GitHub can keep the old commits reachable by their hashes for a while.
+
+> Submitting them with this email, looks fine ?
+  Hi Manikanta,
+
+  Please find my submission for the Senior Full-Stack Developer take-home
+  assessment:
+
+  GitHub repository: https://github.com/yash438/taskboard-assessment
+
+  The repository includes:
+  - Part 1: GraphQL + PostgreSQL schema, technical documentation, AI critique,
+  and my analysis (part1-design/)
+  - Part 2: Node.js GraphQL API and React + TypeScript task board, with design
+  notes (part2-implementation/)
+  - Part 3: RFC on task board performance (part3-rfc/)
+  - Complete AI transcript and my notes on prompting strategy (ai-transcript/)
+
+  The README has setup steps (PostgreSQL via Docker, then a few npm commands)
+  and maps each requirement to its file. Any assumptions I made are listed in
+  ASSUMPTIONS.md.
+
+  I'm happy to walk through any part of it or answer questions.
+
+  Thanks for the opportunity.
+
+  Best regards,
+  Yash Gupta
+  [phone numbers redacted]
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● The email reads well and matches what's in the repo, apart from one line. Sort
+  out these things before you send it:
+
+  1. The transcript isn't in the repo yet. The email says the repo has the
+     "Complete AI transcript", but ai-transcript/ only holds
+     claude-code-prompt.md and prompting-strategy.md. Export the conversation,
+     add it to that folder, then commit and push it before you send.
+  2. "Complete" has to be literally true. The assessment asks for the full,
+     unedited transcript. If you trim or edit the export, change that line to
+     say so. The safest option is to submit it unedited.
+  3. Decide about the co-author lines first. If you're going to rewrite the
+     commit messages, do it before you send the link. That way the reviewer
+     doesn't clone the repo and then find its history has changed.
+
+  Two small optional tweaks:
+  - "PostgreSQL via Docker" is accurate, but the README also covers using a
+    local PostgreSQL install. "PostgreSQL (Docker or local)" says both.
+  - Separating the two phone numbers with " / " is a little easier to read.
